@@ -1,0 +1,13 @@
+{
+  "name": "hisabkhata",
+  "version": "2.0.0",
+  "private": true,
+  "description": "হিসাবখাতা — Bangla personal ledger (local-first PWA with Supabase sync)",
+  "scripts": {
+    "build": "node scripts/build-config.mjs",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

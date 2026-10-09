@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="bn" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#2b4acb">
+  <meta name="description" content="ব্যক্তিগত পাওনা ও দেনার হিসাব">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <title>হিসাবখাতা</title>
+</head>
+<body>
+  <main id="app"><div class="wrap"><p class="muted">লোড হচ্ছে…</p></div></main>
+  <nav id="tabbar" aria-label="প্রধান মেনু"></nav>
+  <div id="sheet"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="config.js" defer></script>
+  <script src="sync-core.js" defer></script>
+  <script src="app.js" defer></script>
+  <!-- Supabase client, pinned. Loaded only for the cloud layer; the app works without it. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>
+  <script src="cloud.js" defer></script>
+</body>
+</html>

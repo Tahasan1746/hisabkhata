@@ -1,0 +1,17 @@
+{
+  "name": "হিসাবখাতা",
+  "short_name": "হিসাবখাতা",
+  "description": "ব্যক্তিগত পাওনা ও দেনার হিসাব",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f7",
+  "theme_color": "#2b4acb",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
