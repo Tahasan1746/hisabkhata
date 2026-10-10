@@ -163,6 +163,8 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("Reminder job failed:", error.message);
-    return res.status(500).json({ error: "Reminder job failed" });
+    return res.status(500).json({
+      error: "Reminder job failed"
+    });
   }
-          }
+}
