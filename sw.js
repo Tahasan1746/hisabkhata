@@ -1,9 +1,11 @@
+
 /* হিসাবখাতা service worker — offline app shell + cache of public libraries only.
  * Financial API responses (Supabase) are deliberately NOT cached: they never reach the cache. */
-const CACHE = 'hisabkhata-v2';
+const CACHE = 'hisabkhata-v3';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './sync-core.js', './cloud.js',
   './config.js', './manifest.json', './icon.svg',
+  './whatsapp-core.js', './whatsapp.js',
 ];
 const PUBLIC_LIBS = /^(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 
@@ -25,7 +27,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  if (!sameOrigin && !PUBLIC_LIBS.test(url.host)) return;   // Supabase and all other origins: pass through, never cached
+  if (!sameOrigin && !PUBLIC_LIBS.test(url.host)) return; // Supabase and other origins: never cached
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
