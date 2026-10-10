@@ -193,3 +193,38 @@ h2 { font-size: 15px; font-weight: 600; margin: 22px 0 10px; }
 @media (prefers-reduced-motion: reduce) { .pill.syncing .dot { animation: none; } }
 code { font-size: 13px; background: var(--line); padding: 1px 5px; border-radius: 4px; }
 .preview .row-actions { margin: 0; }
+
+/* WhatsApp Click-to-Chat */
+.wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #25d366;
+  border-radius: 8px;
+  background: #e7f9ee;
+  color: #128c4a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wa-btn:active {
+  transform: scale(0.98);
+}
+
+html[data-theme="dark"] .wa-btn {
+  background: #123326;
+  color: #54e28b;
+  border-color: #218c50;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] .wa-btn {
+    background: #123326;
+    color: #54e28b;
+    border-color: #218c50;
+  }
+}
