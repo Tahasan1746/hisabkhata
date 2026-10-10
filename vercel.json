@@ -1,0 +1,9 @@
+
+{
+  "crons": [
+    {
+      "path": "/api/telegram-reminders",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
