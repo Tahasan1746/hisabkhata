@@ -1,205 +1,28 @@
-/* হিসাবখাতা — local-first personal ledger
- * Money is stored as integer paisa (1 taka = 100). Dates are local YYYY-MM-DD strings.
- * Repayments are pooled per person and applied oldest-loan-first (FIFO). */
-'use strict';
+from pathlib import Path
 
-/* ---------- helpers ---------- */
-const BN = '০১২৩৪৫৬৭৮৯';
-const $ = sel => document.querySelector(sel);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const toBn = s => String(s).replace(/\d/g, d => BN[d]);
-const toEn = s => String(s ?? '').replace(/[০-৯]/g, d => BN.indexOf(d)).replace(/[,\s]/g, '').trim();
-const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
-const nowIso = () => new Date().toISOString();
-const pad = n => String(n).padStart(2, '0');
-const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const todayISO = () => ymd(new Date());
-const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
-const dayDiff = (a, b) => Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000);
-const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
-const fmt = p => {
-  const v = Math.abs(p) / 100;
-  const s = '৳' + v.toLocaleString('bn-BD', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 });
-  return (p < 0 ? '−' : '') + s;
-};
-const signed = p => (p > 0 ? '+' : '') + fmt(p);
-const parseAmt = s => {
-  const t = toEn(s);
-  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
-  const p = Math.round(parseFloat(t) * 100);
-  return p > 0 ? p : null;
-};
-const fmtDate = iso => (isDate(iso) ? new Date(iso + 'T00:00:00').toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
-const fmtDT = iso => (iso ? new Date(iso).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' }) : 'নেওয়া হয়নি');
-const field = (label, control) => `<label class="field"><span>${label}</span>${control}</label>`;
-const emptyBox = (title, text) => `<div class="empty"><b>${title}</b>${text}</div>`;
+source = Path("/mnt/data/app.js")
+output = Path("/mnt/data/app-edited.js")
 
-/* ---------- constants ---------- */
-const TYPE_LABEL = { lent: 'টাকা ধার দিয়েছি', borrowed: 'টাকা ধার নিয়েছি', received: 'টাকা গ্রহণ করেছি', paid: 'টাকা পরিশোধ করেছি' };
-const REPAY_OF = { received: 'lent', paid: 'borrowed' };   // repayment -> the loan it reduces
-const REPAY_TYPE = { lent: 'received', borrowed: 'paid' };  // loan -> its repayment type
-const RECV_TYPES = ['lent', 'received'];
-const CATEGORIES = ['ব্যক্তিগত', 'ব্যবসা', 'পরিবার', 'কেনাকাটা', 'অন্যান্য'];
-const STATUS = {
-  overdue: ['মেয়াদোত্তীর্ণ', 'pay'], today: ['আজ শেষ', 'warn'], upcoming: ['আসন্ন', 'warn'],
-  later: ['বাকি আছে', ''], nodue: ['শেষ তারিখ নেই', ''], done: ['পরিশোধিত', 'recv'],
-};
-const DEMO_BLOCK = 'ডেমো ডেটা চালু আছে। আসল তথ্য যোগ করতে আগে সেটিংস থেকে ডেমো ডেটা মুছুন।';
-const TABS = [
-  { id: 'dash', label: 'ড্যাশবোর্ড', icon: '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>' },
-  { id: 'people', label: 'ব্যক্তিবর্গ', icon: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-6 7-6s7 2.1 7 6"/><path d="M16 4.5a4 4 0 010 7.5"/>' },
-  { id: 'txns', label: 'লেনদেন', icon: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>' },
-  { id: 'backup', label: 'ব্যাকআপ', icon: '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/>' },
-  { id: 'settings', label: 'সেটিংস', icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>' },
-];
-const DEFAULTS = { key: 'app', theme: 'system', remindDays: 3, overdueAlert: true, lastBackup: null, notified: {} };
+content = source.read_text(encoding="utf-8")
+old = "সংস্করণ ১.০ · স্টোরেজ: এই ডিভাইসের ব্রাউজার (IndexedDB) · ক্লাউড সিঙ্ক: বন্ধ"
+new = "সংস্করণ ১.০ · স্টোরেজ: এই ডিভাইসের ব্রাউজার (IndexedDB) · ক্লাউড সিঙ্ক: ${window.CloudUI ? CloudUI.statusPill() : 'যাচাই হচ্ছে'}"
 
-const S = {
-  loaded: false, people: [], txns: [], app: { ...DEFAULTS },
-  ui: { tab: 'dash', personId: null, pf: 'all', tf: 'all', q: '', pending: null, importErr: [] },
-};
+if content.count(old) != 1:
+    raise ValueError(f"Expected exactly one footer match; found {content.count(old)}. No file written.")
 
-/* ---------- IndexedDB ---------- */
-let db;
-const openDB = () => new Promise((res, rej) => {
-  const r = indexedDB.open('hisabkhata', 1);
-  r.onupgradeneeded = () => {
-    const d = r.result;
-    d.createObjectStore('people', { keyPath: 'id' });
-    d.createObjectStore('txns', { keyPath: 'id' });
-    d.createObjectStore('app', { keyPath: 'key' });
-  };
-  r.onsuccess = () => res(r.result);
-  r.onerror = () => rej(r.error);
-});
-const dbGetAll = store => new Promise((res, rej) => {
-  const req = db.transaction(store, 'readonly').objectStore(store).getAll();
-  req.onsuccess = () => res(req.result);
-  req.onerror = () => rej(req.error);
-});
-/* ops: [{store, put}] | [{store, del: id}] | [{store, clear: true}] — one atomic transaction */
-function dbRun(ops) {
-  if (!ops.length) return Promise.resolve();
-  return new Promise((res, rej) => {
-    const t = db.transaction([...new Set(ops.map(o => o.store))], 'readwrite');
-    for (const o of ops) {
-      const s = t.objectStore(o.store);
-      if (o.clear) s.clear();
-      else if (o.del !== undefined) s.delete(o.del);
-      else s.put(o.put);
-    }
-    t.oncomplete = () => res();
-    t.onerror = () => rej(t.error);
-    t.onabort = () => rej(t.error || new Error('লেখা ব্যর্থ হয়েছে'));
-  });
-}
-async function saveApp(patch) {
-  S.app = { ...S.app, ...patch };
-  await dbRun([{ store: 'app', put: S.app }]);
-}
+edited = content.replace(old, new)
+output.write_text(edited, encoding="utf-8")
 
-/* write every local record and sync state in one transaction */
-async function persistAll() {
-  await dbRun([
-    { store: 'people', clear: true }, { store: 'txns', clear: true },
-    ...S.people.map(p => ({ store: 'people', put: p })),
-    ...S.txns.map(t => ({ store: 'txns', put: t })),
-    { store: 'app', put: S.app },
-  ]);
-}
-async function load() {
-  db = await openDB();
-  const [people, txns, app] = await Promise.all([dbGetAll('people'), dbGetAll('txns'), dbGetAll('app')]);
-  S.people = people;
-  S.txns = txns;
-  S.app = { ...DEFAULTS, ...(app.find(a => a.key === 'app') || {}) };
-  S.loaded = true;
-}
-const applyTheme = () => { document.documentElement.dataset.theme = S.app.theme; };
+# Basic safety checks
+assert len(edited) == len(content) + (len(new) - len(old))
+assert "ক্লাউড সিঙ্ক: বন্ধ" not in edited
+assert "CloudUI.statusPill()" in edited
 
-/* ---------- ledger engine ---------- */
-function dueStatus(dueDate, remaining) {
-  if (remaining <= 0) return 'done';
-  if (!isDate(dueDate)) return 'nodue';
-  const d = dayDiff(dueDate, todayISO());
-  if (d < 0) return 'overdue';
-  if (d === 0) return 'today';
-  return d <= S.app.remindDays ? 'upcoming' : 'later';
-}
-/* Per-person ledger. Returns loans with repaid/remaining/status plus totals. */
-function ledger(personId, list = S.txns) {
-  const mine = list.filter(t => t.personId === personId && !t.voided);
-  const out = {};
-  for (const lt of ['lent', 'borrowed']) {
-    let pool = mine.filter(t => t.type === REPAY_TYPE[lt]).reduce((s, t) => s + t.amount, 0);
-    const loans = mine.filter(t => t.type === lt)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
-    let total = 0, repaid = 0;
-    const items = loans.map(l => {
-      const use = Math.min(pool, l.amount);
-      pool -= use; total += l.amount; repaid += use;
-      const remaining = l.amount - use;
-      return { ...l, repaid: use, remaining, status: dueStatus(l.dueDate, remaining) };
-    });
-    out[lt] = { items, total, repaid, remaining: total - repaid };
-  }
-  out.recv = out.lent.remaining;
-  out.pay = out.borrowed.remaining;
-  out.net = out.recv - out.pay;
-  out.hasLoans = out.lent.total + out.borrowed.total > 0;
-  out.overdue = [...out.lent.items, ...out.borrowed.items].some(i => i.status === 'overdue');
-  return out;
-}
-/* Rejects any state where repayments exceed the loans in that direction (no negative balances). */
-function ledgerError(personId, list) {
-  const mine = list.filter(t => t.personId === personId && !t.voided);
-  const sum = ty => mine.filter(t => t.type === ty).reduce((s, t) => s + t.amount, 0);
-  if (sum('received') > sum('lent')) return `বাকি পাওনার চেয়ে বেশি গ্রহণ করা যাবে না। মোট পাওনা ${fmt(sum('lent'))}, মোট গ্রহণ ${fmt(sum('received'))}।`;
-  if (sum('paid') > sum('borrowed')) return `বাকি দেনার চেয়ে বেশি পরিশোধ করা যাবে না। মোট দেনা ${fmt(sum('borrowed'))}, মোট পরিশোধ ${fmt(sum('paid'))}।`;
-  return null;
-}
-const activeTxns = () => S.txns.filter(t => !t.voided);
-const sumOf = (pid, type) => S.txns.filter(t => !t.voided && t.personId === pid && t.type === type).reduce((s, t) => s + t.amount, 0);
-const nameOf = id => (S.people.find(p => p.id === id) || {}).name || '—';
-const isDemoActive = () => S.people.some(p => p.demo) || S.txns.some(t => t.demo);
-
-function totals() {
-  const T = { recv: 0, pay: 0, net: 0, overdue: 0, month: { got: 0, gave: 0 }, upcoming: [], late: [] };
-  const m = todayISO().slice(0, 7);
-  for (const p of S.people) {
-    const L = ledger(p.id);
-    T.recv += L.recv;
-    T.pay += L.pay;
-    for (const it of [...L.lent.items, ...L.borrowed.items]) {
-      if (it.remaining <= 0) continue;
-      const row = { ...it, person: p };
-      if (it.status === 'overdue') { T.overdue += it.remaining; T.late.push(row); }
-      else if (it.status === 'upcoming' || it.status === 'today') T.upcoming.push(row);
-    }
-  }
-  for (const t of activeTxns()) {
-    if (!t.date.startsWith(m)) continue;
-    if (t.type === 'received') T.month.got += t.amount;
-    if (t.type === 'paid') T.month.gave += t.amount;
-  }
-  const byDue = (a, b) => a.dueDate.localeCompare(b.dueDate);
-  T.upcoming.sort(byDue);
-  T.late.sort(byDue);
-  T.net = T.recv - T.pay;
-  return T;
-}
-
-/* ---------- audit ---------- */
-const audit = (rec, action, detail) => { rec.audit = [...(rec.audit || []), { at: nowIso(), action, detail }]; };
-function changeNote(a, b) {
-  const parts = [];
-  if (a.amount !== b.amount) parts.push(`পরিমাণ ${fmt(a.amount)} → ${fmt(b.amount)}`);
-  if (a.date !== b.date) parts.push(`তারিখ ${fmtDate(a.date)} → ${fmtDate(b.date)}`);
-  if ((a.dueDate || '') !== (b.dueDate || '')) parts.push(`শেষ তারিখ ${fmtDate(a.dueDate)} → ${fmtDate(b.dueDate)}`);
-  return parts.join('; ') || 'তথ্য সম্পাদিত';
-}
-
-/* ---------- UI primitives ---------- */
+print("Edited app.js footer only.")
+print(f"Original size: {len(content)} characters")
+print(f"Edited size: {len(edited)} characters")
+print(f"Output: {output}")
+---------- */
 function toast(msg, bad) {
   const el = $('#toast');
   el.textContent = msg;
