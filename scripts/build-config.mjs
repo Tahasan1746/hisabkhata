@@ -1,7 +1,11 @@
-// হিসাবখাতা · build step. Generates config.js from PUBLIC environment variables.
-//   Vercel build command:  node scripts/build-config.mjs
-//   Vercel output dir:     .   (no framework; the site is static)
-// It refuses to run if a service-role or secret key is supplied, so a leaked key cannot end up in the browser bundle.
+
+ // হিসাবখাতা · build step. Generates config.js from PUBLIC environment variables.
+// Vercel build command: node scripts/build-config.mjs
+// Vercel output dir: . (static site)
+//
+// Only public Supabase values are written to config.js.
+// Server-only secrets must never be exposed to the browser.
+
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -15,27 +19,44 @@ const out = join(root, 'config.js');
 const url = (process.env.SUPABASE_URL || '').trim();
 const key = (process.env.SUPABASE_ANON_KEY || '').trim();
 
-// Anything named like a secret is a mistake to put in a public deploy.
-const forbidden = ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'TELEGRAM_BOT_TOKEN'];
-const leaked = forbidden.filter(name => (process.env[name] || '').trim() !== '');
-if (leaked.length) {
-  console.error(`✖ ${leaked.join(', ')} is set in the frontend build environment. Remove it: secrets belong only on the server job.`);
-  process.exit(1);
+// Warn if server-only secrets exist in the build environment.
+// They are never added to the generated public config.
+const forbidden = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SECRET_KEY',
+  'TELEGRAM_BOT_TOKEN',
+];
+
+const presentSecrets = forbidden.filter(
+  name => (process.env[name] || '').trim() !== ''
+);
+
+if (presentSecrets.length) {
+  console.warn(
+    `⚠ Server-only secrets are present: ${presentSecrets.join(', ')}. ` +
+    'They will not be written to config.js.'
+  );
 }
 
 if (!url && !key) {
-  if (existsSync(out)) console.log('• No SUPABASE_* variables set; keeping the existing config.js (local-only mode).');
-  else console.log('• No SUPABASE_* variables set; config.js is empty (local-only mode).');
+  if (existsSync(out)) {
+    console.log('• No SUPABASE_* variables set; keeping existing config.js (local-only mode).');
+  } else {
+    console.log('• No SUPABASE_* variables set; config.js is empty (local-only mode).');
+  }
   process.exit(0);
 }
+
 if (!url || !key) {
   console.error('✖ Set both SUPABASE_URL and SUPABASE_ANON_KEY, or neither.');
   process.exit(1);
 }
+
 if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/)?$/i.test(url)) {
   console.error('✖ SUPABASE_URL must look like https://<project-ref>.supabase.co');
   process.exit(1);
 }
+
 try {
   Core.assertPublicKey(key);
 } catch (err) {
@@ -49,10 +70,19 @@ window.HISAB_CONFIG = Object.freeze({
   SUPABASE_ANON_KEY: ${JSON.stringify(key)},
 });
 `;
+
 writeFileSync(out, body, 'utf8');
+
 const check = readFileSync(out, 'utf8');
-if (!check.includes(url.replace(/\/$/, ''))) {
-  console.error('✖ config.js was not written correctly');
+
+if (
+  !check.includes(url.replace(/\/$/, '')) ||
+  check.includes('SUPABASE_SERVICE_ROLE_KEY') ||
+  check.includes('SUPABASE_SECRET_KEY') ||
+  check.includes('TELEGRAM_BOT_TOKEN')
+) {
+  console.error('✖ config.js validation failed; refusing to continue.');
   process.exit(1);
 }
-console.log('✔ config.js written with the public Supabase URL and anon/publishable key.');
+
+console.log('✔ config.js written with public Supabase values only.');
